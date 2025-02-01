@@ -7,16 +7,11 @@ import * as AdminJSMongoose from '@adminjs/mongoose';
 import faqModel from './models/faq.model.js';
 import faqRoutes from './routes/faq.routes.js';
 
-// Register the mongoose adapter
 AdminJS.registerAdapter({
   Resource: AdminJSMongoose.Resource,
   Database: AdminJSMongoose.Database,
 });
 
-// Remove mongoose.connect() from here since it's handled in tests
-// Just create the app and export it
-
-// AdminJS configuration
 const adminBro = new AdminJS({
     databases: [mongoose],
     rootPath: '/admin',
@@ -66,7 +61,6 @@ app.use('/api/faqs', faqRoutes);
 
 const PORT = process.env.PORT || 3000;
 
-// Don't start the server if being imported (for tests)
 if (process.env.NODE_ENV !== 'test') {
     app.listen(PORT, () => {
         console.log(`Server running on port ${PORT}`);

@@ -1,10 +1,10 @@
-
 FROM node:16-alpine
 
 WORKDIR /app
 
+# Copy dependency manifests 
 COPY package*.json ./
-RUN npm install
+RUN npm install --production
 
 COPY . .
 

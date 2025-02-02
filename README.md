@@ -1,127 +1,240 @@
-# Multilingual FAQ Management System
+Below are updated versions of the Docker configuration and a new **README.md** file that you can include in your project. These updates assume you want to run the application in a containerized environment with Docker (and Docker Compose) while providing clear instructions for setup, development, and testing.
 
-A robust FAQ management system built with Node.js, Express, MongoDB, and Redis, featuring multilingual support and WYSIWYG editing capabilities.
+---
+
+### Updated `Dockerfile`
+
+```dockerfile
+# Use an official Node.js runtime based on Alpine Linux
+FROM node:16-alpine
+
+# Create and change to the app directory
+WORKDIR /app
+
+# Copy dependency manifests and install dependencies
+COPY package*.json ./
+RUN npm install --production
+
+# Copy the rest of the application code
+COPY . .
+
+# Build steps can be added here if needed, e.g., transpiling code
+
+# Expose the application port
+EXPOSE 3000
+
+# Start the application
+CMD ["npm", "start"]
+```
+
+> **Notes:**
+>
+> - We are installing only production dependencies. If you need dev dependencies for development or testing, you can remove the `--production` flag.
+> - If you plan to build assets (e.g., if you add a frontend build step), you can insert the appropriate build commands before exposing the port.
+
+---
+
+### Updated `docker-compose.yml`
+
+```yaml
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    env_file: .env
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: on-failure
+
+  mongodb:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongo", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  mongodb_data:
+```
+
+> **Highlights:**
+>
+> - **Healthchecks:** Added health checks for both MongoDB and Redis so that the `app` service waits until the dependent services are healthy.
+> - **Restart Policy:** Configured `restart: on-failure` for improved resilience.
+> - **Environment Variables:** The app still loads environment variables from the `.env` file.
+
+---
+
+### New `README.md`
+
+```markdown
+# FAQ Admin API
+
+This project is a containerized Node.js application that provides an FAQ API with multilingual support and an administration dashboard powered by [AdminJS](https://adminjs.co/). The application uses MongoDB as the primary database and Redis for caching, and it also provides file upload functionality via [Formidable](https://github.com/node-formidable/formidable).
+
+## Table of Contents
+
+- [Features](#features)
+- [Prerequisites](#prerequisites)
+- [Getting Started](#getting-started)
+  - [Using Docker](#using-docker)
+  - [Local Setup](#local-setup)
+- [Environment Variables](#environment-variables)
+- [Running Tests](#running-tests)
+- [Project Structure](#project-structure)
+- [Contributing](#contributing)
+- [License](#license)
 
 ## Features
 
-- 🌐 Multilingual support (English, Hindi, Bengali)
-- 📝 WYSIWYG editor for rich text content
-- 🚀 Redis caching for optimized performance
-- 🔄 Automatic translation using Google Translate API
-- ⚡ RESTful API endpoints
-- 🎛️ Admin panel for content management
-- 🧪 Comprehensive test coverage
+- **API Endpoints:**  
+  - `GET /api/faqs`: Retrieve FAQs (supports language selection via query parameter `?lang=hi` for Hindi, `?lang=bn` for Bengali, default is English).
+  - `POST /api/faqs`: Create a new FAQ entry (auto-translates from English to other supported languages).
+  - `POST /api/faqs/upload`: Handle file uploads.
+
+- **Admin Dashboard:**  
+  A secure administration interface available at `/admin` built using AdminJS.
+
+- **Caching:**  
+  Redis is used to cache FAQ responses to boost performance.
+
+- **Containerization:**  
+  Docker and Docker Compose are used for easier setup and deployment.
 
 ## Prerequisites
 
-- Node.js (v14 or higher)
-- MongoDB
-- Redis
-- Google Cloud Project (for translation API)
+- [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/) (for containerized setup)
+- [Node.js](https://nodejs.org/) (for local development without Docker)
+- A [MongoDB](https://www.mongodb.com/) database (or use the provided Docker service)
+- A [Redis](https://redis.io/) server (or use the provided Docker service)
 
-## Installation
+## Getting Started
 
-1. Clone the repository:
-```bash
-git clone https://github.com/yourusername/BharatFD.git
-cd BharatFD
-```
+### Using Docker
 
-2. Install dependencies:
-```bash
-npm install
-```
+1. **Clone the repository:**
 
-3. Configure environment variables:
-```bash
-cp .env.example .env
-```
+   ```bash
+   git clone https://github.com/your-username/faq-admin-api.git
+   cd faq-admin-api
+   ```
 
-Update the `.env` file with your configurations:
-```env
-MONGODB_URI=mongodb://localhost:27017/faqdb
-REDIS_URL=redis://localhost:6379
-GOOGLE_APPLICATION_CREDENTIALS=./service-account.json
-GOOGLE_PROJECT_ID=your-project-id
-PORT=3000
-```
+2. **Configure Environment Variables:**
 
-4. Start the application:
-```bash
-npm start
-```
+   Create a `.env` file in the project root (if not already provided) and set the following variables:
 
-## Docker Deployment
+   ```env
+   # MongoDB connection URI (if not using Docker's MongoDB)
+   MONGODB_URI=mongodb://mongodb:27017/faqdb
 
-Run with Docker Compose:
-```bash
-docker-compose up -d
-```
+   # Redis connection configuration
+   REDIS_HOST=redis
+   REDIS_PORT=6379
+   REDIS_USERNAME=default
+   REDIS_PASSWORD=your-redis-password
 
-## API Documentation
+   # Application port
+   PORT=3000
 
-### Get FAQs
+   # Admin credentials
+   ADMIN_EMAIL=admin@example.com
+   ADMIN_PASSWORD=admin
+   COOKIE_SECRET=your-secret-key
+   ```
 
-```bash
-# Get FAQs in English (default)
-GET /api/faqs
+   > **Note:** When using Docker Compose, the `app` service will use the MongoDB and Redis services by name (`mongodb` and `redis` respectively).
 
-# Get FAQs in Hindi
-GET /api/faqs?lang=hi
+3. **Build and Run the Containers:**
 
-# Get FAQs in Bengali
-GET /api/faqs?lang=bn
-```
+   ```bash
+   docker-compose up --build
+   ```
 
-### Create FAQ
+   The API will be accessible at [http://localhost:3000](http://localhost:3000) and the AdminJS dashboard at [http://localhost:3000/admin](http://localhost:3000/admin).
 
-```bash
-POST /api/faqs
-Content-Type: application/json
+4. **Stopping the Containers:**
 
-{
-  "question": "What is this application?",
-  "answer": "This is a multilingual FAQ management system."
-}
-```
+   To stop the containers, press `CTRL+C` in the terminal and run:
 
-### Upload Files
-```http
-POST /api/faqs/upload
-Content-Type: multipart/form-data
-```
+   ```bash
+   docker-compose down
+   ```
 
-## Admin Panel
+### Local Setup
 
-Access the admin panel at:
-```
-http://localhost:3000/admin
-```
+If you prefer to run the application locally (without Docker):
 
-Default credentials:
-- Email: admin@example.com
-- Password: admin
+1. **Install Dependencies:**
 
-## Testing
+   ```bash
+   npm install
+   ```
 
-Run the test suite:
-```bash
-npm test
-```
+2. **Configure Environment Variables:**
 
-## Code Quality
+   Ensure you have a `.env` file at the project root with the appropriate values (see the [Environment Variables](#environment-variables) section).
 
-Run linting:
-```bash
-npm run lint
-npm run lint:fix  
-```
+3. **Start the Application:**
 
-## Contributing
+   ```bash
+   npm start
+   ```
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'feat: Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+   The application will run on [http://localhost:3000](http://localhost:3000).
+
+## Environment Variables
+
+The following environment variables can be configured in the `.env` file:
+
+- **MongoDB:**
+  - `MONGODB_URI`: Connection string for MongoDB.
+  
+- **Redis:**
+  - `REDIS_HOST`: Redis host.
+  - `REDIS_PORT`: Redis port.
+  - `REDIS_USERNAME`: Redis username.
+  - `REDIS_PASSWORD`: Redis password.
+  
+- **Application:**
+  - `PORT`: Port number on which the API server runs.
+  
+- **Admin Credentials:**
+  - `ADMIN_EMAIL`: Email address for AdminJS authentication.
+  - `ADMIN_PASSWORD`: Password for AdminJS authentication.
+  - `COOKIE_SECRET`: Secret key used for session cookies.
+
+## Running Tests
+
+1. **Ensure Dependencies are Installed:**
+
+   ```bash
+   npm install
+   ```
+
+2. **Run the Tests:**
+
+   ```bash
+   npm run test
+   ```
 

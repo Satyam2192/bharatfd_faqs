@@ -45,12 +45,12 @@ const adminRouter = AdminJSExpress.buildAuthenticatedRouter(adminBro, {
         }
         return null
     },
-    cookiePassword: process.env.COOKIE_SECRET || 'secret-key',
+    cookiePassword: process.env.COOKIE_SECRET,
     cookieName: 'adminjs',
     sessionOptions: {
         resave: false,
         saveUninitialized: false,
-        secret: process.env.COOKIE_SECRET || 'secret-key'
+        secret: process.env.COOKIE_SECRET
     }
 });
 

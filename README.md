@@ -28,6 +28,18 @@ This project is a containerized Node.js application that provides an FAQ API wit
 - **Containerization:**  
   Docker and Docker Compose are used for easier setup and deployment.
 
+- **API endpoints:**
+
+| Method | Endpoint          | Description                     |
+|--------|------------------|---------------------------------|
+| GET    | `/api/faqs`      | Fetch FAQs (default: English)  |
+| GET    | `/api/faqs?lang=hi` | Fetch FAQs in Hindi           |
+| GET    | `/api/faqs?lang=bn` | Fetch FAQs in Bengali         |
+| POST   | `/api/faqs`      | Create a new FAQ               |
+| POST   | `/api/faqs/upload` | Upload files (via `formidable`) |
+| GET    | `/admin`         | AdminJS Dashboard              |
+
+
 ## Prerequisites
 
 - [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/) (for containerized setup)
